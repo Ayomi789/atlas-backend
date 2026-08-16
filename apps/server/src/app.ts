@@ -13,7 +13,7 @@ import chatRoutes from "./routes/chat.routes";
 import memberRoutes from "./routes/member.routes";
 import notificationRoutes from "./routes/notification.routes";
 import activityRoutes from "./routes/activity.routes";
-
+import searchRoutes from "./routes/search.routes";
 
 const app = express();
 
@@ -35,7 +35,7 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/workspaces/:workspaceId/members", memberRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/workspaces/:workspaceId/activity", activityRoutes);
-
+app.use("/api/search", searchRoutes);
 
 
 app.get("/health", (_, res) => {

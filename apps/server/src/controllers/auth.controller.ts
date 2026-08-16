@@ -7,6 +7,8 @@ import {
   resendVerificationEmail,
   requestPasswordReset,
   resetPassword,
+  deleteAccount,
+  updateProfile,
 } from "../services/auth.service";
 import {
   registerSchema,
@@ -15,8 +17,8 @@ import {
   resendVerificationSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  updateProfileSchema,
 } from "../validators/auth.validator";
-
 
 export async function register(req: Request, res: Response) {
   try {
@@ -136,6 +138,41 @@ export async function resetPasswordController(req: Request, res: Response) {
     return res.status(200).json({
       success: true,
       message: result.message,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Something went wrong",
+    });
+  }
+}
+
+export async function deleteAccountController(req: Request, res: Response) {
+  try {
+    const result = await deleteAccount(req.user.id);
+
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Something went wrong",
+    });
+  }
+}
+
+
+export async function updateProfileController(req: Request, res: Response) {
+  try {
+    const data = updateProfileSchema.parse(req.body);
+    const user = await updateProfile(req.user.id, data);
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      data: user,
     });
   } catch (error) {
     return res.status(400).json({

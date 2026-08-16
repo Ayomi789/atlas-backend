@@ -35,7 +35,7 @@ export async function getWorkspaceDocumentsController(
   try {
     const { workspaceId } = req.params;
 
-    const documents = await getWorkspaceDocuments(workspaceId);
+    const documents = await getWorkspaceDocuments(workspaceId, req.user.id);
 
     return res.json({
       success: true,
@@ -86,7 +86,7 @@ export async function uploadDocumentController(
       });
     }
 
-    const document = await uploadDocumentFile(id, req.file);
+    const document = await uploadDocumentFile(id, req.file, req.user.id);
 
     return res.json({
       success: true,

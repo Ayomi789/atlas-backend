@@ -1,82 +1,3 @@
-// import bcrypt from "bcrypt";
-// import jwt from "jsonwebtoken";
-// import { env } from "../config/env";
-
-
-// import prisma from "../config/db";
-// import { RegisterInput, LoginInput } from "../validators/auth.validator";
-
-// export async function registerUser(data: RegisterInput) {
-//   const existingUser = await prisma.user.findUnique({
-//     where: {
-//       email: data.email,
-//     },
-//   });
-
-//   if (existingUser) {
-//     throw new Error("Email is already registered");
-//   }
-
-//   const hashedPassword = await bcrypt.hash(data.password, 10);
-
-//   const user = await prisma.user.create({
-//     data: {
-//       name: data.name,
-//       email: data.email,
-//       password: hashedPassword,
-//     },
-//   });
-
-//   return {
-//     id: user.id,
-//     name: user.name,
-//     email: user.email,
-//     avatar: user.avatar,
-//     createdAt: user.createdAt,
-//   };
-// }
-
-// export async function loginUser(data: LoginInput) {
-//   const user = await prisma.user.findUnique({
-//     where: {
-//       email: data.email,
-//     },
-//   });
-
-//   if (!user) {
-//     throw new Error("Invalid email or password");
-//   }
-
-//   const passwordMatches = await bcrypt.compare(
-//     data.password,
-//     user.password
-//   );
-
-//   if (!passwordMatches) {
-//     throw new Error("Invalid email or password");
-//   }
-
-//   const token = jwt.sign(
-//     {
-//       userId: user.id,
-//     },
-//     env.JWT_SECRET,
-//     {
-//       expiresIn: env.JWT_EXPIRES_IN,
-//     }
-//   );
-
-//   return {
-//     token,
-//     user: {
-//       id: user.id,
-//       name: user.name,
-//       email: user.email,
-//       avatar: user.avatar,
-//     },
-//   };
-// }
-
 
 import bcrypt from "bcrypt";
 import crypto from "crypto";
@@ -267,4 +188,56 @@ export async function resetPassword(token: string, newPassword: string) {
   });
 
   return { message: "Password reset successfully" };
+}
+
+
+export async function deleteAccount(userId: string) {
+  const ownedMemberships = await prisma.workspaceMember.findMany({
+    where: { userId, role: "owner" },
+    include: {
+      workspace: {
+        include: { members: true },
+      },
+    },
+  });
+
+  const blockingWorkspaces = ownedMemberships.filter(
+    (m) => m.workspace.members.length > 1
+  );
+
+  if (blockingWorkspaces.length > 0) {
+    const names = blockingWorkspaces.map((m) => m.workspace.name).join(", ");
+    throw new Error(
+      `You own workspace(s) with other members: ${names}. Transfer ownership or remove other members before deleting your account.`
+    );
+  }
+
+  const soloWorkspaceIds = ownedMemberships
+    .filter((m) => m.workspace.members.length === 1)
+    .map((m) => m.workspaceId);
+
+  if (soloWorkspaceIds.length > 0) {
+    await prisma.workspace.deleteMany({
+      where: { id: { in: soloWorkspaceIds } },
+    });
+  }
+
+  await prisma.user.delete({ where: { id: userId } });
+
+  return { message: "Account deleted successfully" };
+}
+
+
+export async function updateProfile(userId: string, data: UpdateProfileInput) {
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { name: data.name },
+  });
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    avatar: user.avatar,
+  };
 }

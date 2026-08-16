@@ -3,7 +3,7 @@ import { CreateDocumentInput } from "../validators/document.validator";
 import { supabase } from "../config/storage";
 import { extractPdfText } from "./document-processing.service";
 import { createNotification } from "./notification.service";
-
+import { assertWorkspaceAccess } from "./search.service";
 
 async function extractText(file: Express.Multer.File): Promise<string> {
   if (file.mimetype === "application/pdf") {
@@ -23,15 +23,7 @@ import { generateEmbedding } from "./embedding.service";
 import { saveEmbedding } from "./vector.service";
 
 export async function createDocument(data: CreateDocumentInput, uploadedById: string) {
-  const workspace = await prisma.workspace.findUnique({
-    where: {
-      id: data.workspaceId,
-    },
-  });
-
-  if (!workspace) {
-    throw new Error("Workspace not found");
-  }
+  await assertWorkspaceAccess(data.workspaceId, uploadedById);
 
   const document = await prisma.document.create({
     data: {
@@ -47,7 +39,8 @@ export async function createDocument(data: CreateDocumentInput, uploadedById: st
   return document;
 }
 
-export async function getWorkspaceDocuments(workspaceId: string) {
+export async function getWorkspaceDocuments(workspaceId: string, userId: string) {
+  await assertWorkspaceAccess(workspaceId, userId);
   return prisma.document.findMany({
     where: {
       workspaceId,
@@ -78,6 +71,8 @@ export async function deleteDocument(documentId: string, requesterId: string) {
     throw new Error("Document not found");
   }
 
+  await assertWorkspaceAccess(document.workspaceId, requesterId);
+
   await prisma.document.delete({
     where: {
       id: documentId,
@@ -99,7 +94,8 @@ export async function deleteDocument(documentId: string, requesterId: string) {
 
 export async function uploadDocumentFile(
   documentId: string,
-  file: Express.Multer.File
+  file: Express.Multer.File,
+  requesterId: string
 ) {
   // 1. Find the document
   const document = await prisma.document.findUnique({
@@ -111,6 +107,8 @@ export async function uploadDocumentFile(
   if (!document) {
     throw new Error("Document not found");
   }
+
+  await assertWorkspaceAccess(document.workspaceId, requesterId);
 
   try {
     // 2. Extract text

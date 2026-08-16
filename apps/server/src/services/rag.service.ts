@@ -37,20 +37,16 @@ export async function askQuestion(
   const embedding = await generateEmbedding(question);
 
   // Retrieve the most relevant chunks
-  const chunks = await searchSimilarChunks(
+  const allChunks = await searchSimilarChunks(
     embedding,
     workspaceId
   );
 
-  
-
-  if (chunks.length === 0) {
-    return {
-      answer:
-        "I couldn't find any relevant information in the uploaded documents.",
-      sources: [],
-    };
-  }
+  // Only treat chunks as real matches if they clear a minimum similarity bar —
+  // otherwise a plain greeting or off-topic message ends up "grounded" in
+  // whatever happened to be nearest, even if nothing is actually relevant.
+  const SIMILARITY_THRESHOLD = 0.6;
+  const chunks = allChunks.filter((c) => c.similarity >= SIMILARITY_THRESHOLD);
 
   const context = chunks
     .map((chunk) => chunk.content)
@@ -63,9 +59,13 @@ export async function askQuestion(
 
   Use the conversation history to understand follow-up questions.
 
-  Answer ONLY using the provided context.
+  If the user's message is a greeting, thanks, or casual small talk rather than
+  a question about their documents, respond briefly and naturally — do not
+  mention documents, context, or citations at all.
 
-  If the answer cannot be found in the context, reply exactly:
+  Otherwise, answer ONLY using the provided context.
+
+  If the context is empty or the answer cannot be found in it, reply exactly:
 
   "I couldn't find that information in the uploaded documents."
 
@@ -73,7 +73,7 @@ export async function askQuestion(
   ${history}
 
   Relevant Context:
-  ${context}
+  ${context || "(no relevant context was found for this message)"}
 
   Current Question:
   ${question}

@@ -1,5 +1,6 @@
 import prisma from "../config/db";
 import { askQuestion } from "./rag.service";
+import { assertWorkspaceAccess } from "./search.service";
 import { createNotification } from "./notification.service";
 
 export async function chatWithWorkspace(
@@ -8,6 +9,8 @@ export async function chatWithWorkspace(
   question: string,
   conversationId?: string
 ) {
+  await assertWorkspaceAccess(workspaceId, userId);
+
   // 1. Find or create conversation
   let conversation;
 

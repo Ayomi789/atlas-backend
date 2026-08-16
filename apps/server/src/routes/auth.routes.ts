@@ -8,10 +8,13 @@ import {
   resendVerificationController,
   forgotPasswordController,
   resetPasswordController,
+  updateProfileController
 } from "../controllers/auth.controller";
+import { deleteAccountController } from "../controllers/auth.controller";
 
 import { authenticate } from "../middleware/auth.middleware";
 import { authLimiter } from "../middleware/rate-limit.middleware";
+
 
 const router = Router();
 
@@ -25,5 +28,6 @@ router.post("/verify-email", verifyEmailController);
 router.post("/resend-verification", authLimiter, resendVerificationController);
 router.post("/forgot-password", authLimiter, forgotPasswordController);
 router.post("/reset-password", authLimiter, resetPasswordController);
-
+router.delete("/me", authenticate, deleteAccountController);
+router.patch("/me", authenticate, updateProfileController);
 export default router;
