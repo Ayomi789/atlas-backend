@@ -4,6 +4,7 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
   getWorkspaceActivity,
+  dismissAllNotifications
 } from "../services/notification.service";
 
 export async function list(req: Request, res: Response) {
@@ -66,6 +67,22 @@ export async function listWorkspaceActivity(req: Request, res: Response) {
     });
   } catch (error) {
     return res.status(404).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Something went wrong",
+    });
+  }
+}
+
+export async function clearAll(req: Request, res: Response) {
+  try {
+    const result = await dismissAllNotifications(req.user.id);
+
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  } catch (error) {
+    return res.status(400).json({
       success: false,
       message: error instanceof Error ? error.message : "Something went wrong",
     });

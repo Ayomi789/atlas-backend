@@ -3,12 +3,14 @@ import { CreateConversationInput } from "../validators/conversation.validator";
 
 export async function createConversation(
   userId: string,
-  data: CreateConversationInput
+  data: CreateConversationInput,
+  workspaceId: string
 ) {
   return prisma.conversation.create({
     data: {
       title: data.title ?? "New Chat",
       userId,
+      workspaceId,
     },
   });
 }
@@ -16,10 +18,11 @@ export async function createConversation(
 
 
 
-export async function getUserConversations(userId: string) {
+export async function getUserConversations(userId: string, workspaceId: string) {
   return prisma.conversation.findMany({
     where: {
       userId,
+      workspaceId,
     },
     orderBy: {
       updatedAt: "desc",

@@ -41,6 +41,9 @@ model Conversation {
   userId    String
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
   messages  Message[]
 
   createdAt DateTime    @default(now())
@@ -70,6 +73,7 @@ model Workspace {
   members     WorkspaceMember[]
   documents Document[]
   notifications Notification[]
+  conversations Conversation[]
 }
 
 
@@ -147,6 +151,7 @@ model Notification {
   type        String
   message     String
   read        Boolean  @default(false)
+  dismissed   Boolean  @default(false)
 
   createdAt   DateTime @default(now())
 }

@@ -30,10 +30,19 @@ export async function createNotification(
 
 export async function getUserNotifications(userId: string) {
   return prisma.notification.findMany({
-    where: { userId },
+    where: { userId, dismissed: false },
     orderBy: { createdAt: "desc" },
     take: 50,
   });
+}
+
+export async function dismissAllNotifications(userId: string) {
+  await prisma.notification.updateMany({
+    where: { userId, dismissed: false },
+    data: { dismissed: true },
+  });
+
+  return { message: "All notifications cleared" };
 }
 
 export async function markNotificationRead(notificationId: string, userId: string) {

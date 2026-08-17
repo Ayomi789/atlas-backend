@@ -12,8 +12,16 @@ import {
 export async function create(req: Request, res: Response) {
   try {
     const data = createConversationSchema.parse(req.body);
+    const { workspaceId } = req.body;
 
-    const conversation = await createConversation(req.user.id, data);
+    if (!workspaceId) {
+      return res.status(400).json({
+        success: false,
+        message: "workspaceId is required",
+      });
+    }
+
+    const conversation = await createConversation(req.user.id, data, workspaceId);
 
     return res.status(201).json({
       success: true,
@@ -33,7 +41,16 @@ export async function create(req: Request, res: Response) {
 
 export async function list(req: Request, res: Response) {
   try {
-    const conversations = await getUserConversations(req.user.id);
+    const { workspaceId } = req.query;
+
+    if (typeof workspaceId !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "workspaceId is required",
+      });
+    }
+
+    const conversations = await getUserConversations(req.user.id, workspaceId);
 
     return res.status(200).json({
       success: true,

@@ -15,9 +15,10 @@ export async function chatWithWorkspace(
   let conversation;
 
   if (conversationId) {
-    conversation = await prisma.conversation.findUnique({
+    conversation = await prisma.conversation.findFirst({
       where: {
         id: conversationId,
+        userId,
       },
     });
 
@@ -28,6 +29,7 @@ export async function chatWithWorkspace(
     conversation = await prisma.conversation.create({
       data: {
         userId,
+        workspaceId,
         title: question.slice(0, 50),
       },
     });

@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 
 import prisma from "../config/db";
-import { RegisterInput, LoginInput } from "../validators/auth.validator";
+import { RegisterInput, LoginInput, UpdateProfileInput } from "../validators/auth.validator";
 import { sendVerificationEmail, sendPasswordResetEmail } from "./email.service";
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
