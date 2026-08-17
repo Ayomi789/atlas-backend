@@ -17,6 +17,11 @@ import searchRoutes from "./routes/search.routes";
 
 const app = express();
 
+// Render (and most hosting platforms) sit the app behind a reverse proxy.
+// Without this, req.ip always shows the proxy's address instead of the
+// real visitor's — which breaks per-user rate limiting entirely.
+app.set("trust proxy", 1);
+
 app.use(
   cors({
     origin: env.FRONTEND_URL,
