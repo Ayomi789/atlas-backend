@@ -51,4 +51,12 @@ app.get("/health", (_, res) => {
   });
 });
 
+app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: env.NODE_ENV === "production" ? "Something went wrong" : err.message,
+  });
+});
+
 export default app;
