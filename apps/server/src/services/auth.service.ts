@@ -81,13 +81,13 @@ export async function loginUser(data: LoginInput) {
     throw new Error("Please verify your email before logging in");
   }
 
-  const token = jwt.sign(
+   const token = jwt.sign(
     {
       userId: user.id,
     },
     env.JWT_SECRET,
     {
-      expiresIn: env.JWT_EXPIRES_IN,
+      expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
     }
   );
 

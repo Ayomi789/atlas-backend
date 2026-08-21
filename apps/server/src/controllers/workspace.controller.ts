@@ -62,8 +62,9 @@ export async function getAll(req: Request, res: Response) {
 
 export async function getById(req: Request, res: Response) {
   try {
+    const { id } = req.params as { id: string };
     const workspace = await getWorkspaceById(
-      req.params.id,
+      id,
       req.user.id
     );
 
@@ -85,7 +86,8 @@ export async function getById(req: Request, res: Response) {
 export async function update(req: Request, res: Response) {
   try {
     const data = updateWorkspaceSchema.parse(req.body);
-    const workspace = await updateWorkspace(req.params.id, req.user.id, data);
+    const { id } = req.params as { id: string };
+    const workspace = await updateWorkspace(id, req.user.id, data);
 
     return res.status(200).json({
       success: true,

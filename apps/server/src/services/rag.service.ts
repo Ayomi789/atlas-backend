@@ -32,7 +32,7 @@ export async function askQuestion(
   conversationId?: string
 ) {
 
-  const history = await getConversationHistory(conversationId);
+     const history = conversationId ? await getConversationHistory(conversationId) : "";
   // Generate embedding for the user's question
   const embedding = await generateEmbedding(question);
 

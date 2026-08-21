@@ -33,7 +33,7 @@ export async function getWorkspaceDocumentsController(
   res: Response
 ) {
   try {
-    const { workspaceId } = req.params;
+    const { workspaceId } = req.params as { workspaceId: string };
 
     const documents = await getWorkspaceDocuments(workspaceId, req.user.id);
 
@@ -55,7 +55,7 @@ export async function deleteDocumentController(
   res: Response
 ) {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     const result = await deleteDocument(id, req.user.id);
 
@@ -77,7 +77,7 @@ export async function uploadDocumentController(
   res: Response
 ) {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     if (!req.file) {
       return res.status(400).json({

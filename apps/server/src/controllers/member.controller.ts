@@ -13,7 +13,7 @@ import {
 
 export async function list(req: Request, res: Response) {
   try {
-    const { workspaceId } = req.params;
+    const { workspaceId } = req.params as { workspaceId: string };
     const members = await getWorkspaceMembers(workspaceId, req.user.id);
 
     return res.status(200).json({
@@ -30,7 +30,7 @@ export async function list(req: Request, res: Response) {
 
 export async function invite(req: Request, res: Response) {
   try {
-    const { workspaceId } = req.params;
+    const { workspaceId } = req.params as { workspaceId: string };
     const data = inviteMemberSchema.parse(req.body);
 
     const member = await inviteMember(workspaceId, req.user.id, data);
@@ -50,7 +50,7 @@ export async function invite(req: Request, res: Response) {
 
 export async function updateRole(req: Request, res: Response) {
   try {
-    const { workspaceId, memberId } = req.params;
+    const { workspaceId, memberId } = req.params as { workspaceId: string; memberId: string };
     const data = updateMemberRoleSchema.parse(req.body);
 
     const member = await updateMemberRole(workspaceId, req.user.id, memberId, data);
@@ -70,7 +70,7 @@ export async function updateRole(req: Request, res: Response) {
 
 export async function remove(req: Request, res: Response) {
   try {
-    const { workspaceId, memberId } = req.params;
+    const { workspaceId, memberId } = req.params as { workspaceId: string; memberId: string };
 
     const result = await removeMember(workspaceId, req.user.id, memberId);
 

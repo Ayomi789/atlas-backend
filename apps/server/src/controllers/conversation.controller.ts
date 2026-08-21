@@ -71,8 +71,9 @@ export async function list(req: Request, res: Response) {
 
 export async function getOne(req: Request, res: Response) {
   try {
+    const { id } = req.params as { id: string };
     const conversation = await getConversationById(
-      req.params.id,
+      id,
       req.user.id
     );
 
@@ -101,7 +102,8 @@ export async function getOne(req: Request, res: Response) {
 
 export async function remove(req: Request, res: Response) {
   try {
-    await deleteConversation(req.params.id, req.user.id);
+    const { id } = req.params as { id: string };
+    await deleteConversation(id, req.user.id);
 
     return res.status(200).json({
       success: true,
@@ -130,8 +132,10 @@ export async function update(req: Request, res: Response) {
       });
     }
 
+    const { id } = req.params as { id: string };
+
     const conversation = await updateConversation(
-      req.params.id,
+      id,
       req.user.id,
       title
     );

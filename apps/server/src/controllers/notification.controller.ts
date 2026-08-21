@@ -25,7 +25,7 @@ export async function list(req: Request, res: Response) {
 
 export async function markRead(req: Request, res: Response) {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const notification = await markNotificationRead(id, req.user.id);
 
     return res.status(200).json({
@@ -58,7 +58,7 @@ export async function markAllRead(req: Request, res: Response) {
 
 export async function listWorkspaceActivity(req: Request, res: Response) {
   try {
-    const { workspaceId } = req.params;
+    const { workspaceId } = req.params as { workspaceId: string };
     const activity = await getWorkspaceActivity(workspaceId, req.user.id);
 
     return res.status(200).json({
