@@ -1,6 +1,7 @@
 import prisma from "../config/db";
 import { InviteMemberInput, UpdateMemberRoleInput } from "../validators/member.validator";
 import { createNotification } from "./notification.service";
+import { checkSeatLimit, syncSeats } from "./billing.service";
 
 async function assertMembership(workspaceId: string, userId: string) {
   const membership = await prisma.workspaceMember.findUnique({
@@ -16,6 +17,14 @@ async function assertMembership(workspaceId: string, userId: string) {
     throw new Error("Workspace not found");
   }
 
+  return membership;
+}
+
+async function assertMembershipAdmin(workspaceId: string, userId: string) {
+  const membership = await assertMembership(workspaceId, userId);
+  if (membership.role !== "owner" && membership.role !== "admin") {
+    throw new Error("Only workspace owners and admins can do this");
+  }
   return membership;
 }
 
@@ -37,7 +46,8 @@ export async function inviteMember(
   requesterId: string,
   data: InviteMemberInput
 ) {
-  await assertMembership(workspaceId, requesterId);
+  await assertMembershipAdmin(workspaceId, requesterId);
+  await checkSeatLimit(workspaceId);
 
   const user = await prisma.user.findUnique({
     where: { email: data.email },
@@ -85,6 +95,12 @@ export async function inviteMember(
     `${user.name} was added to the workspace as ${data.role}`
   );
 
+  // Bill for the new seat (no-op on the free plan). Membership stays even if
+  // the billing sync fails — we just log it rather than block the invite.
+  await syncSeats(workspaceId).catch((e) =>
+    console.error("Seat sync failed after invite:", e.message)
+  );
+
   return member;
 }
 
@@ -94,7 +110,7 @@ export async function updateMemberRole(
   memberId: string,
   data: UpdateMemberRoleInput
 ) {
-  await assertMembership(workspaceId, requesterId);
+  await assertMembershipAdmin(workspaceId, requesterId);
 
   const member = await prisma.workspaceMember.findFirst({
     where: { id: memberId, workspaceId },
@@ -120,7 +136,7 @@ export async function removeMember(
   requesterId: string,
   memberId: string
 ) {
-  await assertMembership(workspaceId, requesterId);
+  const requester = await assertMembership(workspaceId, requesterId);
 
   const member = await prisma.workspaceMember.findFirst({
     where: { id: memberId, workspaceId },
@@ -130,7 +146,18 @@ export async function removeMember(
     throw new Error("Member not found");
   }
 
+  // Anyone may remove themselves (leave); otherwise owner/admin only.
+  const isSelf = member.userId === requesterId;
+  if (!isSelf && requester.role !== "owner" && requester.role !== "admin") {
+    throw new Error("Only workspace owners and admins can remove members");
+  }
+
   await prisma.workspaceMember.delete({ where: { id: memberId } });
+
+  // Free up the seat on the subscription (no-op on the free plan).
+  await syncSeats(workspaceId).catch((e) =>
+    console.error("Seat sync failed after removal:", e.message)
+  );
 
   return { message: "Member removed successfully" };
 }

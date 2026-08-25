@@ -9,6 +9,7 @@ import {
   resetPassword,
   deleteAccount,
   updateProfile,
+  signInWithGoogle,
 } from "../services/auth.service";
 import {
   registerSchema,
@@ -178,6 +179,34 @@ export async function updateProfileController(req: Request, res: Response) {
     return res.status(400).json({
       success: false,
       message: error instanceof Error ? error.message : "Something went wrong",
+    });
+  }
+}
+
+
+export async function googleAuthController(req: Request, res: Response) {
+  try {
+    const { credential } = req.body as { credential?: string };
+    if (!credential) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing Google credential",
+      });
+    }
+
+    const result = await signInWithGoogle(credential);
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? `Google sign-in failed: ${error.message}`
+          : "Google sign-in failed",
     });
   }
 }

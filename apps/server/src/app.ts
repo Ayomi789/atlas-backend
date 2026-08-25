@@ -14,6 +14,9 @@ import memberRoutes from "./routes/member.routes";
 import notificationRoutes from "./routes/notification.routes";
 import activityRoutes from "./routes/activity.routes";
 import searchRoutes from "./routes/search.routes";
+import webhookRoutes from "./routes/webhook.routes";
+import billingRoutes from "./routes/billing.routes";
+import demoRoutes from "./routes/demo.routes";
 
 const app = express();
 
@@ -28,8 +31,9 @@ app.use(
     credentials: true,
   })
 );
-app.use(helmet());
+app.use("/api/webhooks", webhookRoutes); // raw-body route — MUST be before express.json()
 app.use(express.json());
+app.use(helmet());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/conversations", conversationRoutes);
@@ -41,7 +45,8 @@ app.use("/api/workspaces/:workspaceId/members", memberRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/workspaces/:workspaceId/activity", activityRoutes);
 app.use("/api/search", searchRoutes);
-
+app.use("/api/billing", billingRoutes);
+app.use("/api/demo", demoRoutes);
 
 app.get("/health", (_, res) => {
   res.status(200).json({

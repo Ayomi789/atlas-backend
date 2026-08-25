@@ -1,13 +1,14 @@
 import { Request, Response } from "express";
+
+import prisma from "../config/db";
 import { createDocumentSchema } from "../validators/document.validator";
 import {
   createDocument,
   getWorkspaceDocuments,
   deleteDocument,
+  uploadDocumentFile,
 } from "../services/document.service";
-
-import { uploadDocumentFile } from "../services/document.service";
-
+import { checkDocumentLimit } from "../services/billing.service";
 
 export async function createDocumentController(req: Request, res: Response) {
   try {
@@ -49,7 +50,6 @@ export async function getWorkspaceDocumentsController(
   }
 }
 
-
 export async function deleteDocumentController(
   req: Request,
   res: Response
@@ -71,7 +71,6 @@ export async function deleteDocumentController(
   }
 }
 
-
 export async function uploadDocumentController(
   req: Request,
   res: Response
@@ -85,6 +84,19 @@ export async function uploadDocumentController(
         message: "No file uploaded",
       });
     }
+
+    const existing = await prisma.document.findUnique({
+      where: { id },
+      select: { workspaceId: true },
+    });
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        message: "Document not found",
+      });
+    }
+
+    await checkDocumentLimit(existing.workspaceId);
 
     const document = await uploadDocumentFile(id, req.file, req.user.id);
 

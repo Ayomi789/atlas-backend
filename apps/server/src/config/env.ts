@@ -35,4 +35,15 @@ export const env = {
   FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:5173",
 
   NODE_ENV: process.env.NODE_ENV || "development",
+  //   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY!,
+  // STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET!,
+  // STRIPE_TEAM_PRICE_ID: process.env.STRIPE_TEAM_PRICE_ID!,
+  // STRIPE_BUSINESS_PRICE_ID: process.env.STRIPE_BUSINESS_PRICE_ID!,
+  PADDLE_API_KEY: process.env.PADDLE_API_KEY!,
+  PADDLE_WEBHOOK_SECRET: process.env.PADDLE_WEBHOOK_SECRET!,
+  PADDLE_TEAM_PRICE_ID: process.env.PADDLE_TEAM_PRICE_ID!,
+  PADDLE_BUSINESS_PRICE_ID: process.env.PADDLE_BUSINESS_PRICE_ID!,
+  PADDLE_ENVIRONMENT: process.env.PADDLE_ENVIRONMENT || "sandbox",
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID!,
+  DEMO_WORKSPACE_ID: process.env.DEMO_WORKSPACE_ID || "",
 };

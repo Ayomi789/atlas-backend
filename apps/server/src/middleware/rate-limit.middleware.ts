@@ -10,3 +10,12 @@ export const authLimiter = rateLimit({
     message: "Too many attempts. Please try again later.",
   },
 });
+
+export const demoLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 demo questions per IP per window
+  message: {
+    success: false,
+    message: "Demo limit reached — create a free account to keep asking.",
+  },
+});

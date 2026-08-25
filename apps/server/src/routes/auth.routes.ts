@@ -8,7 +8,8 @@ import {
   resendVerificationController,
   forgotPasswordController,
   resetPasswordController,
-  updateProfileController
+  updateProfileController,
+  googleAuthController
 } from "../controllers/auth.controller";
 import { deleteAccountController } from "../controllers/auth.controller";
 
@@ -28,6 +29,7 @@ router.post("/verify-email", verifyEmailController);
 router.post("/resend-verification", authLimiter, resendVerificationController);
 router.post("/forgot-password", authLimiter, forgotPasswordController);
 router.post("/reset-password", authLimiter, resetPasswordController);
+router.post("/google", authLimiter, googleAuthController);
 router.delete("/me", authenticate, deleteAccountController);
 router.patch("/me", authenticate, updateProfileController);
 export default router;

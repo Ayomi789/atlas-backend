@@ -44,7 +44,7 @@ const user = await prisma.user.create({
   } catch (err) {
     await prisma.user.delete({ where: { id: user.id } });
     throw new Error(
-      "We couldn't send the verification email, so registration wasn't completed. Please try again."
+      "We couldn't deliver a verification email to that address. Please double-check it (disposable and fake emails won't work) and try again."
     );
   }
 
@@ -239,5 +239,61 @@ export async function updateProfile(userId: string, data: UpdateProfileInput) {
     name: user.name,
     email: user.email,
     avatar: user.avatar,
+  };
+}
+
+import { OAuth2Client } from "google-auth-library";
+
+const googleClient = new OAuth2Client();
+
+export async function signInWithGoogle(credential: string) {
+  const ticket = await googleClient.verifyIdToken({
+    idToken: credential,
+    audience: env.GOOGLE_CLIENT_ID,
+  });
+
+  const payload = ticket.getPayload();
+  if (!payload?.email) {
+    throw new Error("Google account didn't provide an email");
+  }
+
+  const email = payload.email.toLowerCase();
+
+  let user = await prisma.user.findUnique({ where: { email } });
+
+  if (!user) {
+    // Password is required by the schema but never used for Google accounts.
+    const randomPassword = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10);
+    user = await prisma.user.create({
+      data: {
+        name: payload.name || email.split("@")[0],
+        email,
+        password: randomPassword,
+        emailVerified: true,
+        avatar: payload.picture ?? null,
+      },
+    });
+  } else if (!user.emailVerified) {
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerified: true },
+    });
+  }
+
+  const token = jwt.sign(
+    { userId: user.id },
+    env.JWT_SECRET,
+    { expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"] }
+  );
+
+  return {
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      emailVerified: user.emailVerified,
+    },
   };
 }
