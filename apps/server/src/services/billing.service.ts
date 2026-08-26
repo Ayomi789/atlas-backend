@@ -380,6 +380,15 @@ export async function handlePaddleEvent(event: {
           ...(periodEnd ? { currentPeriodEnd: periodEnd } : {}),
         },
       });
+
+      // Portal self-service lets admins reduce their seat quantity below the
+      // real member count. Correct it immediately — syncSeats no-ops when the
+      // quantity already matches, so this can't loop.
+      if (status === "active" || status === "trialing") {
+        await syncSeats(workspaceId).catch((e) =>
+          console.error("Seat sync after webhook failed:", e.message)
+        );
+      }
       break;
     }
 
