@@ -44,6 +44,7 @@ export async function demoAsk(req: Request, res: Response) {
       },
     });
   } catch (error) {
+    console.error("Demo ask failed:", error);
     return res.status(500).json({
       success: false,
       message: "Demo question failed",
