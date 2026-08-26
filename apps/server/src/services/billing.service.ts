@@ -86,27 +86,69 @@ export async function checkSeatLimit(workspaceId: string) {
 
 // Keeps the Paddle subscription quantity in sync with the workspace's member
 // count so per-seat billing stays accurate. No-op for free workspaces.
-export async function syncSeats(workspaceId: string) {
+// Returns true if a quantity update was pushed to Paddle.
+export async function syncSeats(workspaceId: string): Promise<boolean> {
   const sub = await prisma.subscription.findUnique({
     where: { workspaceId },
   });
-  if (!sub || !isPaddleSubscriptionId(sub.stripeSubscriptionId)) return;
-  if (sub.status !== "active" && sub.status !== "trialing") return;
+  if (!sub || !isPaddleSubscriptionId(sub.stripeSubscriptionId)) return false;
+  if (sub.status !== "active" && sub.status !== "trialing") return false;
 
   const priceId = PRICE_IDS[sub.plan];
-  if (!priceId) return;
+  if (!priceId) return false;
 
   const seats = await prisma.workspaceMember.count({
     where: { workspaceId },
   });
   const quantity = Math.max(seats, 1);
-  if (quantity === sub.seats) return; // nothing changed
+  if (quantity === sub.seats) return false; // nothing changed
 
   await paddle.subscriptions.update(sub.stripeSubscriptionId, {
     items: [{ priceId, quantity }],
     prorationBillingMode: "prorated_immediately",
   });
   // The subscription.updated webhook writes the new seats back to the row.
+  return true;
+}
+
+// Daily true-up: force every active subscription's quantity back to its real
+// member count. Catches admins who reduce seats via the customer portal.
+export async function reconcileAllSeats() {
+  const subs = await prisma.subscription.findMany({
+    where: { status: { in: ["active", "trialing"] } },
+  });
+
+  const results = {
+    checked: subs.length,
+    corrected: 0,
+    inSync: 0,
+    failed: 0,
+    details: [] as { workspaceId: string; outcome: string; error?: string }[],
+  };
+
+  for (const sub of subs) {
+    try {
+      const changed = await syncSeats(sub.workspaceId);
+      if (changed) {
+        results.corrected++;
+        results.details.push({
+          workspaceId: sub.workspaceId,
+          outcome: "quantity corrected to member count",
+        });
+      } else {
+        results.inSync++;
+      }
+    } catch (e) {
+      results.failed++;
+      results.details.push({
+        workspaceId: sub.workspaceId,
+        outcome: "failed",
+        error: e instanceof Error ? e.message : "unknown",
+      });
+    }
+  }
+
+  return results;
 }
 
 const PRICE_IDS: Record<string, string> = {
@@ -302,6 +344,21 @@ export async function handlePaddleEvent(event: {
       const status = ["active", "trialing", "past_due"].includes(d.status)
         ? d.status
         : "canceled";
+
+      // A late subscription.updated for a canceled sub must converge to the
+      // same state as subscription.canceled (events can arrive together).
+      if (status === "canceled") {
+        await prisma.subscription.updateMany({
+          where: { workspaceId },
+          data: {
+            plan: "free",
+            status: "canceled",
+            stripeSubscriptionId: null,
+            currentPeriodEnd: null,
+          },
+        });
+        break;
+      }
 
       await prisma.subscription.upsert({
         where: { workspaceId },

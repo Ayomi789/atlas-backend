@@ -44,6 +44,7 @@ export const env = {
   PADDLE_TEAM_PRICE_ID: process.env.PADDLE_TEAM_PRICE_ID!,
   PADDLE_BUSINESS_PRICE_ID: process.env.PADDLE_BUSINESS_PRICE_ID!,
   PADDLE_ENVIRONMENT: process.env.PADDLE_ENVIRONMENT || "sandbox",
+  CRON_SECRET: process.env.CRON_SECRET || "",
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID!,
   DEMO_WORKSPACE_ID: process.env.DEMO_WORKSPACE_ID || "",
 };
