@@ -1,0 +1,17 @@
+name: Seat reconciliation
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # daily 06:00 UTC
+  workflow_dispatch: # allow manual runs from the Actions tab
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reconcile seat quantities
+        run: |
+          curl --max-time 120 -sS -X POST \
+            https://atlas-backend-zpsp.onrender.com/api/billing/reconcile-seats \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -w "\nHTTP %{http_code}\n"
