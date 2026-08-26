@@ -1,7 +1,7 @@
 import prisma from "../config/db";
 import { InviteMemberInput, UpdateMemberRoleInput } from "../validators/member.validator";
 import { createNotification } from "./notification.service";
-import { checkSeatLimit, syncSeats } from "./billing.service";
+import { checkSeatLimit } from "./billing.service";
 
 async function assertMembership(workspaceId: string, userId: string) {
   const membership = await prisma.workspaceMember.findUnique({
@@ -95,12 +95,6 @@ export async function inviteMember(
     `${user.name} was added to the workspace as ${data.role}`
   );
 
-  // Bill for the new seat (no-op on the free plan). Membership stays even if
-  // the billing sync fails — we just log it rather than block the invite.
-  await syncSeats(workspaceId).catch((e) =>
-    console.error("Seat sync failed after invite:", e.message)
-  );
-
   return member;
 }
 
@@ -153,11 +147,6 @@ export async function removeMember(
   }
 
   await prisma.workspaceMember.delete({ where: { id: memberId } });
-
-  // Free up the seat on the subscription (no-op on the free plan).
-  await syncSeats(workspaceId).catch((e) =>
-    console.error("Seat sync failed after removal:", e.message)
-  );
 
   return { message: "Member removed successfully" };
 }

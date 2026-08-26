@@ -11,8 +11,8 @@ export const paddle = new Paddle(env.PADDLE_API_KEY, {
 
 export const PLAN_LIMITS = {
   free: { docs: 50, questionsPerMonth: 100, seats: 3 },
-  team: { docs: 5000, questionsPerMonth: 5000, seats: 50 },
-  business: { docs: 100000, questionsPerMonth: 100000, seats: 500 },
+  team: { docs: 5000, questionsPerMonth: 5000, seats: 20 },
+  business: { docs: 100000, questionsPerMonth: 100000, seats: 50 },
 } as const;
 
 export type Plan = keyof typeof PLAN_LIMITS;
@@ -84,73 +84,6 @@ export async function checkSeatLimit(workspaceId: string) {
   }
 }
 
-// Keeps the Paddle subscription quantity in sync with the workspace's member
-// count so per-seat billing stays accurate. No-op for free workspaces.
-// Returns true if a quantity update was pushed to Paddle.
-export async function syncSeats(workspaceId: string): Promise<boolean> {
-  const sub = await prisma.subscription.findUnique({
-    where: { workspaceId },
-  });
-  if (!sub || !isPaddleSubscriptionId(sub.stripeSubscriptionId)) return false;
-  if (sub.status !== "active" && sub.status !== "trialing") return false;
-
-  const priceId = PRICE_IDS[sub.plan];
-  if (!priceId) return false;
-
-  const seats = await prisma.workspaceMember.count({
-    where: { workspaceId },
-  });
-  const quantity = Math.max(seats, 1);
-  if (quantity === sub.seats) return false; // nothing changed
-
-  await paddle.subscriptions.update(sub.stripeSubscriptionId, {
-    items: [{ priceId, quantity }],
-    prorationBillingMode: "prorated_immediately",
-  });
-  // The subscription.updated webhook writes the new seats back to the row.
-  return true;
-}
-
-// Daily true-up: force every active subscription's quantity back to its real
-// member count. Catches admins who reduce seats via the customer portal.
-export async function reconcileAllSeats() {
-  const subs = await prisma.subscription.findMany({
-    where: { status: { in: ["active", "trialing"] } },
-  });
-
-  const results = {
-    checked: subs.length,
-    corrected: 0,
-    inSync: 0,
-    failed: 0,
-    details: [] as { workspaceId: string; outcome: string; error?: string }[],
-  };
-
-  for (const sub of subs) {
-    try {
-      const changed = await syncSeats(sub.workspaceId);
-      if (changed) {
-        results.corrected++;
-        results.details.push({
-          workspaceId: sub.workspaceId,
-          outcome: "quantity corrected to member count",
-        });
-      } else {
-        results.inSync++;
-      }
-    } catch (e) {
-      results.failed++;
-      results.details.push({
-        workspaceId: sub.workspaceId,
-        outcome: "failed",
-        error: e instanceof Error ? e.message : "unknown",
-      });
-    }
-  }
-
-  return results;
-}
-
 const PRICE_IDS: Record<string, string> = {
   team: env.PADDLE_TEAM_PRICE_ID,
   business: env.PADDLE_BUSINESS_PRICE_ID,
@@ -172,12 +105,8 @@ export async function changePlan(
     throw new Error("Subscription is not active");
   }
 
-  const seats = await prisma.workspaceMember.count({
-    where: { workspaceId },
-  });
-
   await paddle.subscriptions.update(sub.stripeSubscriptionId, {
-    items: [{ priceId: PRICE_IDS[plan], quantity: Math.max(seats, 1) }],
+    items: [{ priceId: PRICE_IDS[plan], quantity: 1 }],
     // Keep customData in sync so webhook fallbacks never see a stale plan.
     customData: { workspaceId, plan },
     prorationBillingMode: "prorated_immediately",
@@ -277,11 +206,8 @@ export async function getCheckoutParams(
     });
   }
 
-  const seats = await prisma.workspaceMember.count({
-    where: { workspaceId },
-  });
-
-  return { customerId, priceId: PRICE_IDS[plan], quantity: Math.max(seats, 1) };
+  // Flat pricing: quantity is always 1 — the plan price is the whole bill.
+  return { customerId, priceId: PRICE_IDS[plan], quantity: 1 };
 }
 
 
@@ -360,13 +286,26 @@ export async function handlePaddleEvent(event: {
         break;
       }
 
+      // Flat pricing: the quantity must always be 1. If a customer edits it in
+      // the portal, clamp it back — the plan price is the whole bill.
+      if (quantity !== 1 && (status === "active" || status === "trialing")) {
+        await paddle.subscriptions
+          .update(d.id, {
+            items: [{ priceId: PRICE_IDS[plan], quantity: 1 }],
+            prorationBillingMode: "prorated_immediately",
+          })
+          .catch((e) =>
+            console.error("Quantity clamp failed:", e.message)
+          );
+      }
+
       await prisma.subscription.upsert({
         where: { workspaceId },
         create: {
           workspaceId,
           plan,
           status,
-          seats: quantity,
+          seats: 1,
           stripeCustomerId: d.customerId,
           stripeSubscriptionId: d.id,
           ...(periodEnd ? { currentPeriodEnd: periodEnd } : {}),
@@ -374,21 +313,12 @@ export async function handlePaddleEvent(event: {
         update: {
           plan,
           status,
-          seats: quantity,
+          seats: 1,
           stripeCustomerId: d.customerId,
           stripeSubscriptionId: d.id,
           ...(periodEnd ? { currentPeriodEnd: periodEnd } : {}),
         },
       });
-
-      // Portal self-service lets admins reduce their seat quantity below the
-      // real member count. Correct it immediately — syncSeats no-ops when the
-      // quantity already matches, so this can't loop.
-      if (status === "active" || status === "trialing") {
-        await syncSeats(workspaceId).catch((e) =>
-          console.error("Seat sync after webhook failed:", e.message)
-        );
-      }
       break;
     }
 
