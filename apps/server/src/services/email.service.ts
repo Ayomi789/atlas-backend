@@ -48,6 +48,35 @@ export async function sendPasswordResetEmail(to: string, name: string, token: st
   }
 }
 
+export async function sendWorkspaceInviteEmail(opts: {
+  to: string;
+  workspaceName: string;
+  invitedByName: string;
+  role: string;
+  token: string;
+}) {
+  const link = `${env.FRONTEND_URL}/invite/${opts.token}`;
+
+  const { error } = await resend.emails.send({
+    from: env.EMAIL_FROM,
+    to: opts.to,
+    subject: `${opts.invitedByName} invited you to ${opts.workspaceName} on Atlas`,
+    html: `
+      <p>Hi,</p>
+      <p><strong>${opts.invitedByName}</strong> invited you to join <strong>${opts.workspaceName}</strong> on Atlas as <strong>${opts.role}</strong>.</p>
+      <p><a href="${link}" style="display:inline-block;padding:10px 18px;background:#243e31;color:#fff;text-decoration:none;border-radius:8px;">Accept invite</a></p>
+      <p>Or paste this link into your browser:</p>
+      <p><a href="${link}">${link}</a></p>
+      <p>This invite expires in 7 days. If you weren't expecting this, you can ignore this email — no account will be created and nothing will change.</p>
+    `,
+  });
+
+  if (error) {
+    console.error("Failed to send invite email:", error);
+    throw new Error(`Failed to send invite email: ${error.message}`);
+  }
+}
+
 // export async function sendVerificationEmail(to: string, name: string, token: string) {
 //   const link = `${env.FRONTEND_URL}/verify-email?token=${token}`;
 

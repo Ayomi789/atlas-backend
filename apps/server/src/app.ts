@@ -17,6 +17,7 @@ import searchRoutes from "./routes/search.routes";
 import webhookRoutes from "./routes/webhook.routes";
 import billingRoutes from "./routes/billing.routes";
 import demoRoutes from "./routes/demo.routes";
+import inviteRoutes from "./routes/invite.routes";
 
 const app = express();
 
@@ -42,6 +43,8 @@ app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/workspaces/:workspaceId/members", memberRoutes);
+app.use("/api/workspaces/:workspaceId/invites", inviteRoutes);
+app.use("/api/invites", inviteRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/workspaces/:workspaceId/activity", activityRoutes);
 app.use("/api/search", searchRoutes);
