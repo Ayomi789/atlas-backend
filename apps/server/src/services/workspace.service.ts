@@ -115,3 +115,29 @@ export async function updateWorkspace(
 
   return updated;
 }
+
+export async function deleteWorkspace(
+  workspaceId: string,
+  userId: string
+) {
+  // Verify user is the owner
+  const membership = await prisma.workspaceMember.findUnique({
+    where: {
+      userId_workspaceId: {
+        userId,
+        workspaceId,
+      },
+    },
+  });
+
+  if (!membership || membership.role !== "owner") {
+    throw new Error("Only the workspace owner can delete this workspace");
+  }
+
+  // Delete workspace (cascades to members, documents, conversations, invites, notifications, subscriptions)
+  await prisma.workspace.delete({
+    where: { id: workspaceId },
+  });
+
+  return { success: true };
+}

@@ -6,6 +6,7 @@ import {
   getAll,
   getById,
   update,
+  remove,
 } from "../controllers/workspace.controller";
 
 
@@ -15,6 +16,7 @@ router.post("/", authenticate, create);
 router.get("/", authenticate, getAll);
 router.get("/:id", authenticate, getById);
 router.patch("/:id", authenticate, update);
+router.delete("/:id", authenticate, remove);
 
 
 export default router;

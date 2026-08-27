@@ -7,6 +7,7 @@ import {
   getUserWorkspaces,
   getWorkspaceById,
   updateWorkspace,
+  deleteWorkspace,
 } from "../services/workspace.service";
 
 
@@ -98,6 +99,29 @@ export async function update(req: Request, res: Response) {
     return res.status(400).json({
       success: false,
       message: error instanceof Error ? error.message : "Something went wrong",
+    });
+  }
+}
+
+export async function remove(req: Request, res: Response) {
+  try {
+    const { id } = req.params as { id: string };
+    await deleteWorkspace(id, req.user.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Workspace deleted successfully",
+    });
+  } catch (error) {
+    const status = error instanceof Error && error.message.includes("owner")
+      ? 403
+      : 404;
+    return res.status(status).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Something went wrong",
     });
   }
 }
